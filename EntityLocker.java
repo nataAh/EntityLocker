@@ -14,7 +14,7 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
 	private ConcurrentMap<T, ReentrantLock> locksMap = new ConcurrentHashMap<T, ReentrantLock>();
 	private static volatile ReentrantLock globalLock = new ReentrantLock();
 	Condition globalLockCondition = globalLock.newCondition();
-	private ConcurrentMap<Long, Integer> locksByThread = new ConcurrentHashMap<Long, Integer>();
+	private static ConcurrentMap<Long, Integer> locksByThread = new ConcurrentHashMap<Long, Integer>();
 
 
 	/**
@@ -39,6 +39,7 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
 			return tryLockGlobaly(timeOut, unit);
 		}
 		
+	
 		// not global lock case
 		final Lock lock = getLockByEntityId(entityId);
 	    if (lock == null) {
@@ -68,12 +69,8 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
 	public boolean isEscalateLockToGlobal() {
 		Long threadId = Thread.currentThread().getId();
 
-		Integer locksNbForCurrentThread = locksByThread.putIfAbsent(threadId, 1);
-		if (locksNbForCurrentThread != null) {
-			locksByThread.put(threadId, locksNbForCurrentThread++);
-		} else {
-			locksNbForCurrentThread = 1;
-		}
+		Integer locksNbForCurrentThread = locksByThread.getOrDefault(threadId, 1);
+		locksByThread.put(threadId, ++locksNbForCurrentThread);
 		
 		return (locksNbForCurrentThread > locksEscalationLimit);
 	}
@@ -93,6 +90,10 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
             throw new IllegalArgumentException("Entity id cannot be null");
         }
 
+        if (globalLock.isLocked() && globalLock.isHeldByCurrentThread()) {
+        	this.unlockGlobalLock();
+        }
+        
         ReentrantLock lock = locksMap.get(entityId);
         if (lock == null) {
             throw new IllegalMonitorStateException("Lock for the Entity id: " + entityId.toString() + " is not found");
