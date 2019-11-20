@@ -22,12 +22,12 @@ public class EntityLockerTest {
 
 		try {			
 			//concurrent request to lock the different entities
-			System.out.println("Test global and concurent locks");
-			testGlobalLock(null); //OK
+//			System.out.println("Test global and concurent locks");
+//			testGlobalLock(null); //OK
 			
 			//concurrent request to lock the same entity
-			System.out.println("Test global and concurrent request to lock the same entity");
-			testGlobalLock(1); //OK
+//			System.out.println("Test global and concurrent request to lock the same entity");
+//			testGlobalLock(1); //OK
 
 			System.out.println("Test global lock Escalation");
 			testGlobalLockEscalation();
