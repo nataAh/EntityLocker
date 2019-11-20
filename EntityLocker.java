@@ -10,11 +10,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class EntityLocker<T> implements EntityLockerInterface<T>{
 
-	private final static int locksEscalationLimit = 2;
+	private final static int locksEscalationLimit = 12;
 	private ConcurrentMap<T, ReentrantLock> locksMap = new ConcurrentHashMap<T, ReentrantLock>();
 	private static volatile ReentrantLock globalLock = new ReentrantLock();
 	Condition globalLockCondition = globalLock.newCondition();
 	private static ConcurrentMap<Long, Integer> locksByThread = new ConcurrentHashMap<Long, Integer>();
+	private boolean useEscalation = false;
 
 
 	/**
@@ -34,7 +35,7 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
 		if(entityId == null || timeOut == 0 || unit == null ) throw new IllegalArgumentException();
 		
 		// Check and escalate the lock to global if needed
-		if (isEscalateLockToGlobal()) {
+		if (useEscalation && isEscalateLockToGlobal()) {
 			System.out.println("Escalate lock to global for thread " + Thread.currentThread().getName() + " for id " + entityId);
 			return tryLockGlobaly(timeOut, unit);
 		}
@@ -144,7 +145,7 @@ public class EntityLocker<T> implements EntityLockerInterface<T>{
 		if(globalLock.isLocked() && globalLock.isHeldByCurrentThread()) {
 			globalLock.unlock();
 			System.out.println("Thread " + Thread.currentThread().getName()+ " release global lock. Current HoldCount:" + globalLock.getHoldCount() + "\n" + "\n");
-			globalLockCondition.signalAll();
+			//globalLockCondition.signalAll();
 		} else {
 			throw new IllegalMonitorStateException("Global Lock is not found for thread " + Thread.currentThread().getName());
 		}
